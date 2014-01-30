@@ -1,20 +1,35 @@
 # Overview
 
-This is a small collection of [RMI](link to tutorial) examples and an
-integration with clojure. Eventhough RMI is an 'old technology' it's
-still in use (e.g. EJB). There are many shortcommings and some even
-say [it sucks](http://foo.bar/link).
+This is a collection of code examples in Java and Clojure that I put
+together. After I had tried different things I thought it was time for
+my very first github project. So this is it.
 
-See also http://nakkaya.com/2009/12/05/distributed-clojure-using-rmi/
+This is a very compact article about Clojure and RMI:
+http://nakkaya.com/2009/12/05/distributed-clojure-using-rmi/
+
+I ran all these examples on a Samsung Chromebook with an Ubuntu 12.04
+LTS.
+
+	Linux version 3.4.0 (chrome-bot@build63-m2) (gcc version 4.7.x-google 20130114 (prerelease) (4.7.2_cos_gg_c8f69e0) ) #1
+	 SMP Wed Oct 23 03:22:56 PDT 2013
+	CPU: ARMv7 Processor [410fc0f4] revision 4 (ARMv7), cr=10c5387d
+	CPU: PIPT / VIPT nonaliasing data cache, PIPT instruction cache
+	Machine: SAMSUNG EXYNOS5 (Flattened Device Tree), model: Google Snow
+
+Java:
+
+	$ java -version
+	java version "1.7.0_25"
+	OpenJDK Runtime Environment (IcedTea 2.3.10) (7u25-2.3.10-1ubuntu0.12.04.2)
+	OpenJDK Zero VM (build 22.0-b10, mixed mode)
+
+I used an old clojure 1.3.0.
 
 # RmiExample1
 
 Connect an RMI client to an RMI server without using a
 registry. Instead the server writes the serialized RMI stub to a file
 from which the client reads it.
-
-**TODO**: der Name der Datei sollte als Kommandozeilenargument
-  angegeben werden.
 
 + Compile
 
@@ -479,11 +494,6 @@ minibuffer and have Swank eval that. In this case
 ```compile-with-cl``` is not involved and I get a
 ```java.lang.ClassNotFoundException: foo.MyService```.
 
-(let [url-cl (java.net.URLClassLoader.
-			  (into-array [(java.net.URL. "http://127.0.0.1:8080/class-server/")]))
-	  dyn-cl (clojure.lang.DynamicClassLoader. url-cl)]
-  (.bindRoot Compiler/LOADER dyn-cl))
-
-To fix this I'll do
+**[TODO: explain how to use bind-loader-root.clj]**
 
 
