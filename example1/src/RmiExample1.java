@@ -4,17 +4,14 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.rmi.Remote;
 import java.rmi.RemoteException;
-import java.rmi.registry.LocateRegistry;
-import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
-import java.util.Date;
 
 public class RmiExample1 {
 
 	interface MyService extends Remote {
 
 		String ID = MyService.class.getCanonicalName() + ".ser";
-		int PORT = 6666;
+		int PORT = 0;
 
 		void voidMethod() throws RemoteException;
 	}

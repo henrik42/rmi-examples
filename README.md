@@ -1,35 +1,44 @@
 # Overview
 
 This is a collection of code examples in Java and Clojure that I put
-together. After I had tried different things I thought it was time for
-my very first github project. So this is it.
+together. After I had played around with RMI and tried different
+things I thought it was time for my very first github project. So this
+is it.
 
-This is a very compact article about Clojure and RMI:
+For a quick RMI/Clojure intro see
 http://nakkaya.com/2009/12/05/distributed-clojure-using-rmi/
 
-I ran all these examples on a Samsung Chromebook with an Ubuntu 12.04
+I ran all my examples on a Samsung Chromebook with an Ubuntu 12.04
 LTS.
 
-	Linux version 3.4.0 (chrome-bot@build63-m2) (gcc version 4.7.x-google 20130114 (prerelease) (4.7.2_cos_gg_c8f69e0) ) #1
-	 SMP Wed Oct 23 03:22:56 PDT 2013
+	Linux version 3.4.0 (chrome-bot@build63-m2) (gcc version 4.7.x-google 20130114 (prerelease) (4.7.2_cos_gg_c8f69e0) ) #1 SMP Wed Oct 23 03:22:56 PDT 2013
 	CPU: ARMv7 Processor [410fc0f4] revision 4 (ARMv7), cr=10c5387d
 	CPU: PIPT / VIPT nonaliasing data cache, PIPT instruction cache
 	Machine: SAMSUNG EXYNOS5 (Flattened Device Tree), model: Google Snow
 
-Java:
+For Java I use:
 
 	$ java -version
 	java version "1.7.0_25"
 	OpenJDK Runtime Environment (IcedTea 2.3.10) (7u25-2.3.10-1ubuntu0.12.04.2)
 	OpenJDK Zero VM (build 22.0-b10, mixed mode)
 
-I used an old clojure 1.3.0.
+And for Clojure I used an old clojure 1.3.0. I'll do tests
+against 1.5.x in the future.
 
 # RmiExample1
 
 Connect an RMI client to an RMI server without using a
 registry. Instead the server writes the serialized RMI stub to a file
 from which the client reads it.
+
+This example is just for playing around. I wanted to see how *tightly
+coupled* the client and the server had to be and how one may get away
+without using the registry.
+
+You can set ```RmiExample1.MyService.PORT``` to non-zero in order to
+run the server on a fixed port number. See ```RmiExample2``` for a
+more realistic use case.
 
 + Compile
 
@@ -40,10 +49,33 @@ from which the client reads it.
   
 		example1$ java -cp bin/ 'RmiExample1$Server'
 		example1$ java -cp bin/ 'RmiExample1$Client'
-		
+
+## Some thoughts about RMI
+
+I really dislike that RMI forces me to use RMI-specific
+classes/interfaces (like ```extends Remote``` and ```throws
+RemoteException```) for the *service contract*
+(```RmiExample1.MyService``` in this case). I cannot just use any
+*plain Java interface* and tell RMI to make a remote call. The *RMI
+API is infective*.
+
+Of course there is more to this: if we could use just any Java
+interface method to make a remote call there would be no way to say,
+for example that the returned value should be a *remote object* (with
+*by-reference* semantics instead of *by-value*). With RMI you say just
+this by having the returned class extend ```java.rmi.Remote```. So the
+idea of making RMI calls *against* any Java interface with by-value
+semantics would just give us a *remote procedure call*-like
+solution. RMI gives us a *distributed object* solution. For may use
+cases though the RPC solution is what you want.
+
+Q: Is there a way to take any java interface and generate the *RMI
+counterpart class* on the fly? And then use a Java dynamic proxy to
+wrap one with the other?
+
 # RmiExample2
 
-An RMI server that **creates and executes** the RMI registry in the
+An RMI server that **creates and runs** the RMI registry in the
 server's JVM. The client may run in the same JVM or in a seperate one.
 
 + Compile
@@ -55,6 +87,91 @@ server's JVM. The client may run in the same JVM or in a seperate one.
   
 		example2$ java -cp bin/ 'RmiExample2$Server'
 		example2$ java -cp bin/ 'RmiExample2$Client'
+
+## Calling the server through a firewall
+
+Again you can set ```RmiExample2.MyService.PORT``` to non-zero in
+order to run the server on a fixed port number. You can use this if
+you want to call the server through a firewall.
+
+In this case you have to open **two ports** in the firewall: one for
+the RMI registry and another for the service/object you want to
+call.
+
+## Telling the client how to connect
+
+Note that the server puts **connection data** for the client into the
+object that it registers with the RMI registry (from where the client
+retrieves it). Often this is a source of problems since the client
+uses these to connect to the service/remote object --- **not to the
+registry**!! So if the registered object contained
+```localhost:1234``` and the client ran on a different host, it would
+fail to connect.
+
+There are other scenarios:
+
++ Client and server are located in different *domains* and the client
+  receives ```somehost:1234```. If the clients DNS server cannot
+  resolve the hostname (because it has a different default domain),
+  the clients fails.
+
++ When the server has more than one TCP/IP interface and only one is
+  reachable from the client (i.e. there is a TCP/IP route to only one
+  if the server's interfaces) then there is a chance that the server
+  delivers the wrong IP or hostname to the client. For the hostname it
+  depends on how the client's DNS server resolves it.
+
+See what the server prints on startup: 
+
+	exporting RmiExample2$MyServiceRmiImpl@13974ba on port 0
+	Starting RMI registry on port 1099
+	Binding Proxy[RmiExample2$MyService,RemoteObjectInvocationHandler[UnicastRef [liveRef: [endpoint:[127.0.0.1:40487] \
+	  (local),objID:[-d39bdd5:143e9a66f67:-7fff, -918886190803948582]]]]] with id RmiExample2.MyService to RMI registry
+
+And this:
+
+	example2$ netstat -na | egrep '1099|40487'
+	tcp6       0      0 :::40487                :::*                    LISTEN     
+	tcp6       0      0 :::1099                 :::*                    LISTEN     
+
+So the server tells the client to connect to the remote object on
+```127.0.0.1:40487```. If the client ran on a remote host this would
+not work!
+
+Although the server uses ```127.0.0.1:40487``` for the client
+connection it opens it's own ```ServerSocket``` on ```0.0.0.0:40487```
+(and not ```127.0.0.1:40487```). All these details are controlled by
+the ```java.rmi.server.RMIServerSocketFactory``` and the
+```java.rmi.server.RMIClientSocketFactory``` (**TODO: show example of
+using these**).
+
+Note that the connect info does not even have to include an existing
+host! Try this:
+
+	example2$ java -Djava.rmi.server.hostname=foo.bar -cp bin/ 'RmiExample2$Server'
+	exporting RmiExample2$MyServiceRmiImpl@13974ba on port 0
+	Starting RMI registry on port 1099
+	Binding Proxy[RmiExample2$MyService,RemoteObjectInvocationHandler[UnicastRef [liveRef: [endpoint:[foo.bar:51564] \
+	  (local),objID:[-6e293192:143e9ac855a:-7fff, 3177075534561695956]]]]] with id RmiExample2.MyService to RMI registry
+
+With ```-Djava.rmi.server.hostname=foo.bar``` we tell the RMI runtime
+which host info to put into the connection data. The server does not
+even try to resolve the hostname! That's fine and correct: the connect
+info is for the **client** and the **client** actually may be able to
+resolve ```foo.bar```.
+
+But mine isn't:
+
+	example2$ java -cp bin/ 'RmiExample2$Client'
+	Connecting to RMI registry on port 1099
+	Looking up service of type MyService with id RmiExample2.MyService
+	Calling voidMethod() on Proxy[RmiExample2$MyService,RemoteObjectInvocationHandler[UnicastRef [liveRef: [endpoint:[foo.bar:51564] \
+	  (remote),objID:[-6e293192:143e9ac855a:-7fff, 3177075534561695956]]]]]
+    Exception in thread "main" java.rmi.UnknownHostException: Unknown host: foo.bar; nested exception is:
+        java.net.UnknownHostException: foo.bar
+
+**TODO: say something about the clientsocketfactory**
+**TODO: what about the RMI registry not being reachable from the client?**
 
 # RmiRegistry (example3)
 

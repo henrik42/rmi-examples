@@ -11,7 +11,7 @@ public class RmiExample2 {
 	interface MyService extends Remote {
 
 		String RMI_ID = MyService.class.getCanonicalName();
-		int PORT = 6666;
+		int PORT = 0;
 
 		void voidMethod() throws RemoteException;
 	}
@@ -38,7 +38,7 @@ public class RmiExample2 {
 			boolean connectToRegistry = args.length > 0
 					&& "connect".equals(args[0]);
 
-			Registry registry;
+			final Registry registry;
 			if (connectToRegistry) {
 				System.out.println("Connecting to RMI registry on port "
 						+ RMI_DEFFAULT_PORT);
