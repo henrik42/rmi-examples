@@ -286,10 +286,10 @@ definition for the server's stub classes and interfaces**.
 It will retrieve the servers stubs (which contains the instance data
 only **but not the class definiton**!) via a registry and will use an
 ```URLClassLoader``` to **dynamically** load the class definitions
-(via HTTP) that are needed for deserialization (**on demand**). This
-is even true for method parameter and return types and for exception
-types also!  So there does not need to be **any upfront exchange of
-class files**.
+(via HTTP from a *class server*) that are needed for deserialization
+(**on demand**). This is even true for method parameter and return
+types and for exception types also!  So there does not need to be
+**any upfront exchange of class files**.
 
 In ```RmiExample6``` we will implement a simple *class server* (that
 runs in the RMI server's JVM) that gives access to the server's class
