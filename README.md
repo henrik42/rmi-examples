@@ -512,12 +512,12 @@ In ```sf.clj``` I put functions for creating
 ```java.rmi.server.RMIServerSocketFactory```. You can tell the
 ```run-rmi-server``` to use these factories like this:
 
-	example7$ java -cp bin:lib/clojure.jar clojure.main -i clj/h42/rmi-server.clj -i clj/h42/sf.clj \
-	-e '(run-rmi-server :csf (new-csf :addr oobar") :ssf (new-ssf :addr "foo"))' -e '@(promise)'
+	example7$ java -cp lib/clojure.jar clojure.main -i clj/h42/rmi-server.clj -i clj/h42/sf.clj \
+	-e '(run-rmi-server :csf (new-csf :addr "foobar") :ssf (new-ssf :addr "foo"))' -e '@(promise)'
 
 And run the client like this:
 
-	example7$ java -cp lib/clojure.jar clojure.main -i clj/h42/rmi-client.clj -e '(run-rmi-client)'
+	example7$ java -cp lib/clojure.jar clojure.main -i clj/h42/rmi-client.clj -i clj/h42/sf.clj -e '(run-rmi-client)'
 
 ## Using the Java inter-op
 

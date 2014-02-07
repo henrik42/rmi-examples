@@ -21,7 +21,7 @@
     r))
 
 (defn new-csf [& {:keys [addr port backlog] :or {backlog 0}}]
-  (let [r (proxy [java.rmi.server.RMIClientSocketFactory] []
+  (let [r (proxy [java.rmi.server.RMIClientSocketFactory java.io.Serializable] []
             (createSocket [h p]
               (.println System/out (format "%s : opens (client) socket on ip %s and port %s"
                                            this (to-inet-addr (or addr h)) (or port p)))
