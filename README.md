@@ -28,9 +28,9 @@ against 1.5.x in the future.
 
 # RmiExample1
 
-Connect an RMI client to an RMI server without using a
-registry. Instead the server writes the serialized RMI stub to a file
-from which the client reads it.
+Connect an RMI client to an RMI server **without using a
+registry**. Instead the server writes the serialized RMI stub to a
+file from which the client reads it.
 
 This example is just for playing around. I wanted to see how *tightly
 coupled* the client and the server had to be and how one may get away
@@ -65,9 +65,9 @@ for example that the returned value should be a *remote object* (with
 *by-reference* semantics instead of *by-value*). With RMI you say just
 this by having the returned class extend ```java.rmi.Remote```. So the
 idea of making RMI calls *against* any Java interface with by-value
-semantics would just give us a *remote procedure call*-like
-solution. RMI gives us a *distributed object* solution. For may use
-cases though the RPC solution is what you want.
+semantics would just give us a *remote procedure call*-like (RPC)
+solution. RMI gives us a *distributed object* solution. For many use
+cases though the RPC solution is all you want.
 
 Q: Is there a way to take any java interface and generate the *RMI
 counterpart class* on the fly? And then use a Java dynamic proxy to
@@ -76,7 +76,9 @@ wrap one with the other?
 # RmiExample2
 
 An RMI server that **creates and runs** the RMI registry in the
-server's JVM. The client may run in the same JVM or in a seperate one.
+server's JVM (below you find an example of running the RMI registry in
+it's own process/JVM). The client may run in the same JVM or in a
+seperate one.
 
 + Compile
 
@@ -115,11 +117,12 @@ There are other scenarios:
   resolve the hostname (because it has a different default domain),
   the clients fails.
 
-+ When the server has more than one TCP/IP interface and only one is
-  reachable from the client (i.e. there is a TCP/IP route to only one
-  if the server's interfaces) then there is a chance that the server
-  delivers the wrong IP or hostname to the client. For the hostname it
-  depends on how the client's DNS server resolves it.
++ When the server has more than one TCP/IP interface (*multi-homed
+  host*) and only one is reachable from the client (i.e. there is a
+  TCP/IP route to only one if the server's interfaces/IP addresses)
+  then there is a chance that the server delivers the wrong IP or
+  hostname to the client. For the hostname it depends on how the
+  client's DNS server resolves it.
 
 See what the server prints on startup: 
 
@@ -139,11 +142,11 @@ So the server tells the client to connect to the remote object on
 not work!
 
 Although the server uses ```127.0.0.1:40487``` for the client
-connection it opens it's own ```ServerSocket``` on ```0.0.0.0:40487```
-(and not ```127.0.0.1:40487```). All these details are controlled by
-the ```java.rmi.server.RMIServerSocketFactory``` and the
-```java.rmi.server.RMIClientSocketFactory``` (**TODO: show example of
-using these**).
+connection data it opens it's own ```ServerSocket``` on
+```0.0.0.0:40487``` (and not ```127.0.0.1:40487```). All these details
+are controlled by the ```java.rmi.server.RMIServerSocketFactory``` and
+the ```java.rmi.server.RMIClientSocketFactory```. See RmiExample7
+below for more about this.
 
 Note that the connect info does not even have to include an existing
 host! Try this:
@@ -237,7 +240,8 @@ And:
 
 This example **will not work**. I just kept it for demonstration. In
 ```RmiExample1``` and ```RmiExample2``` the server and the client
-**exchange** a serialized object (stub) for the remote call.
+**exchange** a serialized object (stub) for the remote call. Can we
+get away **without exchanging anything**?
 
 In this example the client creates the stub *locally* (without
 exchanging anything) and uses an ```RMIClientSocketFactory``` to
@@ -284,12 +288,12 @@ definition.
 definition for the server's stub classes and interfaces**.
 
 It will retrieve the servers stubs (which contains the instance data
-only **but not the class definiton**!) via a registry and will use an
-```URLClassLoader``` to **dynamically** load the class definitions
-(via HTTP from a *class server*) that are needed for deserialization
-(**on demand**). This is even true for method parameter and return
-types and for exception types also!  So there does not need to be
-**any upfront exchange of class files**.
+only **but not the class definiton**!) via the RMI registry and will
+use an ```URLClassLoader``` to **dynamically** load the class
+definitions (via HTTP from a *class server*) that are needed for
+deserialization (**on demand**). This is even true for method
+parameter and return types and for exception types also!  So there
+does not need to be **any upfront exchange of class files**.
 
 In ```RmiExample6``` we will implement a simple *class server* (that
 runs in the RMI server's JVM) that gives access to the server's class
@@ -301,7 +305,9 @@ EJB beans via RMI (you do have to deploy the *class-server*
 though). In such situations you usually have to supply (*deploy*)
 container specific classes (JARs) (e.g. 'JBoss client JARs') and
 sometimes even EJB specific classes that you do not have at build time
-because they are built during deplyoment (IBM Websphere).
+because they are built during deployment (IBM Websphere).
+
+**TODO: examples for JBoss and Websphere**
 
 + Compile
 
@@ -499,6 +505,20 @@ server can be implemented in clojure.
 	
 		example7$ java -cp lib/clojure.jar clojure.main -i clj/h42/rmi-client.clj -e '(run-rmi-client)'
 
+## Controlling the client and server side sockets
+
+In ```sf.clj``` I put functions for creating
+```java.rmi.server.RMIClientSocketFactory``` and
+```java.rmi.server.RMIServerSocketFactory```. You can tell the
+```run-rmi-server``` to use these factories like this:
+
+	example7$ java -cp bin:lib/clojure.jar clojure.main -i clj/h42/rmi-server.clj -i clj/h42/sf.clj \
+	-e '(run-rmi-server :csf (new-csf :addr oobar") :ssf (new-ssf :addr "foo"))' -e '@(promise)'
+
+And run the client like this:
+
+	example7$ java -cp lib/clojure.jar clojure.main -i clj/h42/rmi-client.clj -e '(run-rmi-client)'
+
 ## Using the Java inter-op
 
 The ```run-rmi-server``` from above uses reflection
@@ -535,13 +555,14 @@ And run it like:
 **It wont' work!** It will give you a
 ```java.lang.ClassNotFoundException: foo.MyService```. The reason is,
 that the **compiler** tries to load the class ```foo.MyService``` at
-**compile** time (i.e. macro expansion) before the function is
-executed (at **eval** time).
+**compile** time (i.e. macro expansion when the ```proxy``` macro is
+expanded!) before the function is executed (at **eval** time when the
+```(.setContextClassLoader (Thread/currentThread) cl)``` is executed).
 
 But there is a simple trick: **set the classloader before the form is
 compiled**. You could do this by first running ```set-ctccl.clj```
 (you may remove the call to ```.setContextClassLoader``` from
-```run-rmi-server2``` if you like):
+```run-rmi-server2``` for this run if you like):
 
 	example7$ java -cp lib/clojure.jar clojure.main -i clj/h42/set-ctccl.clj -i clj/h42/rmi-server2.clj -e '(run-rmi-server2)'
 
