@@ -3,8 +3,6 @@
     (string? addr) (java.net.InetAddress/getByName addr)
     :else (java.net.InetAddress/getByAddress (into-array Byte/TYPE addr))))
 
-;;        _ (.println System/out (format "NEW! %s" this))]
-
 (defn new-ssf [& {:keys [addr port backlog] :or {backlog 0}}]
   (let [addr (and addr (to-inet-addr addr))
         r (proxy [java.rmi.server.RMIServerSocketFactory] []
