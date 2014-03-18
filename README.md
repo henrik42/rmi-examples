@@ -394,7 +394,7 @@ server can be implemented in clojure.
 
 	This is it:
 
-		(defn run-rmi-server [& {:keys [ssf csf r-ssf r-csf]}]
+		(defn run-rmi-server [& {:keys [host port ssf csf r-ssf r-csf] :or {port 1099}}]
 		  (let [cl (java.net.URLClassLoader.
 					(into-array [(java.net.URL. "http://127.0.0.1:8080/class-server/")]))
 				ifc (Class/forName "RmiExample7$MyService" false cl)
@@ -403,10 +403,18 @@ server can be implemented in clojure.
 						  (.println System/out (str "Invoking method '" method "' with args '" args "'"))))
 				impl (java.lang.reflect.Proxy/newProxyInstance cl (into-array [ifc]) hndlr)
 				stub (java.rmi.server.UnicastRemoteObject/exportObject impl 0 csf ssf)
-				rmi-reg (java.rmi.registry.LocateRegistry/createRegistry 1099 r-csf r-ssf)]
+				rmi-reg (if host
+						  (do
+							(.println System/out (format "Connecting to RMI registry on host/port %s/%s with csf %s"
+														 host port r-csf))
+							(java.rmi.registry.LocateRegistry/getRegistry host port r-csf))
+						  (do
+							(.println System/out (format "Creating RMI registry on port %s with csf %s and ssf %s"
+														 port r-csf r-ssf))
+							(java.rmi.registry.LocateRegistry/createRegistry port r-csf r-ssf)))]
 			(.rebind rmi-reg "RmiExample7.MyService" stub)
 			(.println System/out (format "Registered %s" stub))
-			(.println System/out (format "Waiting for incoming calls on %s" rmi-reg))))
+			(.println System/out (format "Waiting for incoming calls on RMI %s / service %s" rmi-reg stub))))
   
   The ```rmi-server```
 
@@ -416,10 +424,12 @@ server can be implemented in clojure.
       is so)
 	+ creates a *Java dynamic proxy* for the ```Remote``` interface
 	+ publishes this object (which gives the stub)
-	+ starts the RMI registry
+	+ starts the RMI registry or connects to a running registry
 	+ and binds the stub
 
-			example7$ java -cp lib/clojure.jar clojure.main -i clj/h42/rmi-server.clj -e '(run-rmi-server)'
+  Make sure that the ```class-server``` is running:
+  
+	  example7$ java -cp lib/clojure.jar clojure.main -i clj/h42/rmi-server.clj -e '(run-rmi-server)'
 
   The function takes some optional arguments which will be explained
   later.
@@ -430,8 +440,8 @@ server can be implemented in clojure.
   delegation strategy* in ```java.lang.ClassLoader.loadClass(String,
   boolean)``` (go ahead and try it).
 
-  **Note:** There seem to be cases **when using the OpenJDK** when
-  this call returns --- i.e. the JVM exits --- right after
+  There seem to be cases (**when using the OpenJDK**) when this call
+  returns --- i.e. the JVM exits --- right after
   ```(run-rmi-server)``` has returned. This is probably because there
   are only *daemon threads* running. In this case the JVM will
   terminate. But there are other times when this does not happen. I
@@ -510,8 +520,8 @@ server can be implemented in clojure.
 
   This is it:
 
-		(defn run-rmi-client []
-		  (let [rmi-reg (java.rmi.registry.LocateRegistry/getRegistry 1099)
+		(defn run-rmi-client [& {:keys [r-csf host port] :or {host "127.0.0.1" port 1099}}]
+		  (let [rmi-reg (java.rmi.registry.LocateRegistry/getRegistry host port r-csf)
 				_ (.println System/out (format "Using RMI registry %s" rmi-reg))
 				cl (java.net.URLClassLoader.
 					(into-array [(java.net.URL. "http://127.0.0.1:8080/class-server/")]))]
