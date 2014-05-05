@@ -1,21 +1,17 @@
-;;
-;; A class-server
-;;
-(use 'clojure.java.io)
-
 (defn- log [& xs]
   (.println System/out (apply str xs)))
 
-(defn copy-input-stream [is & [os]]
-  (let [is (input-stream is)
-        os (or os (java.io.ByteArrayOutputStream.))
-        bffr (byte-array 8192)]
-    (loop []
-      (let [r (.read is bffr)]
-        (if (= -1 r) (when (instance? java.io.ByteArrayOutputStream os) (.toByteArray os))
-            (do 
-              (.write os bffr 0 r)
-              (recur)))))))
+(def the-class-cache (atom {}))
+
+(defn- get-cache [r]
+  (let [e (@the-class-cache r)]
+    (log (format "GET-CACHE: '%s' --> %s" r e))
+    e))
+
+(defn put-cache [class-name class-bytes]
+  (let [k (str class-name ".class")]
+    (log (format "PUT-CACHE: '%s'" k))
+    (swap! the-class-cache assoc k class-bytes)))
 
 (defn- resource-bytes [r]
   (let [cl (-> (Thread/currentThread) .getContextClassLoader)
@@ -23,13 +19,13 @@
     (when hits
       ;; (log "Resources for '" r "' : " hits)
       (with-open [is (.openStream (first hits))]
-        (copy-input-stream is)))))
+        (copy-io! is)))))
 
 (defn- handle-exchange [xchng pttrn]
   (try 
     (let [req-uri (str (.getRequestURI xchng))
           _ (log "Received request '" req-uri "'")
-          _ (copy-input-stream (.getRequestBody xchng)) 
+          _ (copy-io! (.getRequestBody xchng)) ;; consume body!
           [_ cls-name] (or (re-matches pttrn req-uri)
                            (throw (RuntimeException.
                                    (str
@@ -39,14 +35,15 @@
                                     pttrn))))
           cls-bytes (or
                      (resource-bytes cls-name)
+                     (get-cache cls-name)
                      (throw (RuntimeException. (str
                                                 "Resource '"
                                                 cls-name
                                                 "' not found."))))
           _ (log (str "Returning " (alength cls-bytes) " bytes for resource '" cls-name "'"))]
       (.sendResponseHeaders xchng 200 (alength cls-bytes))
-      (copy-input-stream (java.io.ByteArrayInputStream. cls-bytes) (.getResponseBody xchng)))
-    (catch Throwable t (log "handle-exchange failed !! : " t (with-out-str (.printStackTrace t (java.io.PrintWriter. *out*)))))
+      (copy-io! (java.io.ByteArrayInputStream. cls-bytes) (.getResponseBody xchng)))
+    (catch Throwable t (log "handle-exchange failed !! : " t))
     (finally (.close xchng))))
 
 (defn run-class-server []

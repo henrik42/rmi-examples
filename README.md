@@ -154,7 +154,7 @@ connection data it opens it's own ```ServerSocket``` on
 ```0.0.0.0:40487``` (and not ```127.0.0.1:40487```). This may be what
 you want or not. Opening a listening socket on ```127.0.0.1``` and not
 on ```0.0.0.0``` is a simple way to keep remote clients from
-connectiong to your RMI services.
+connecting to your RMI services.
 
 All these details are controlled by the
 ```java.rmi.server.RMIServerSocketFactory``` and the
@@ -356,187 +356,129 @@ server can be implemented in clojure.
 	
 ## RmiExample7
 
-+ Run ```class-server```
+### The class-server
 
-	The code in ```class-server.clj``` has no **name space** and is
-    not ment to be ```use```d as a *library*. Instead it is just
-    loaded (and compiled) as a script (into ```user``` namespace).
+The code in ```class-server.clj``` has no **name space** and is not
+ment to be ```use```d as a *library*. Instead it is just loaded (and
+compiled) as a script (into ```user``` namespace).
 
-	When I started out with clojure it took me a while to understand
-    how to use clojure source files as a *true script* (which is just
-    loaded via plain file IO) and when to ```use``` it as a re-useable
-    library (usually via classloading/classpath -- which is file IO in
-    the end too though ```;-)``` ).
+When I started out with clojure it took me a while to understand how
+to use clojure source files as a *true script* (which is just loaded
+via plain file IO) and when to ```use``` it as a re-useable library
+(usually via classloading/classpath -- which is file IO in the end too
+though ```;-)``` ).
 
-	In order to keep the code short and to not put things in that
-	aren't relevant for what I'm tring to do, I decided to not use any
-	namespace in this example. In *real code* you **will** use
-	namespaces though and you will break up the code into many more
-	functions.
+In order to keep the code short and to not put things in that aren't
+relevant for what I'm tring to do, I decided to not use any namespace
+in this example. In *real code* you **will** use namespaces though and
+you will break up the code into many more functions.
 
-	Note that the **classpath includes ```bin/```**. Otherwise the
-    server (as it is implemented now) could not find the class
-    definition files.
+Note that the **classpath includes ```bin/```**. Otherwise the
+```class-server``` (as it is implemented now) could not find the class
+definition files.
 
-	All we need to compile in this example is the ```Remote```
-	interface ```RmiExample7$MyService```. We do **not have any
-	implementation in Java in this example!**.
+All we need to compile in this example is the ```Remote``` interface
+```RmiExample7$MyService```. We do **not have any implementation in
+Java in this example!**
 	
-		example7$ rm -rf bin/*
-		example7$ javac -d bin/ src/RmiExample7.java
+	example7$ rm -rf bin/* && javac -d bin/ src/RmiExample7.java
 
-	Now we *serve* the ```Remote``` interface class definition (and
-    other classes as well):
-	
-		example7$ java -cp lib/clojure.jar:bin/ clojure.main -i clj/h42/class-server.clj -e '(run-class-server)'
-				
-+ Run ```rmi-server``` with registry
+Now we *serve* the ```Remote``` interface class definition (and other
+classes as well):
 
-	This is it:
+	example7$ java -cp lib/clojure.jar:bin/ clojure.main \
+	  -i clj/h42/misc.clj \
+	  -i clj/h42/class-server.clj \
+	  -e '(run-class-server)'
 
-		(defn run-rmi-server [& {:keys [host port ssf csf r-ssf r-csf] :or {port 1099}}]
-		  (let [cl (java.net.URLClassLoader.
-					(into-array [(java.net.URL. "http://127.0.0.1:8080/class-server/")]))
-				ifc (Class/forName "RmiExample7$MyService" false cl)
-				hndlr (proxy [java.lang.reflect.InvocationHandler] []
-						(invoke [proxy method args]
-						  (.println System/out (str "Invoking method '" method "' with args '" args "'"))))
-				impl (java.lang.reflect.Proxy/newProxyInstance cl (into-array [ifc]) hndlr)
-				stub (java.rmi.server.UnicastRemoteObject/exportObject impl 0 csf ssf)
-				rmi-reg (if host
-						  (do
-							(.println System/out (format "Connecting to RMI registry on host/port %s/%s with csf %s"
-														 host port r-csf))
-							(java.rmi.registry.LocateRegistry/getRegistry host port r-csf))
-						  (do
-							(.println System/out (format "Creating RMI registry on port %s with csf %s and ssf %s"
-														 port r-csf r-ssf))
-							(java.rmi.registry.LocateRegistry/createRegistry port r-csf r-ssf)))]
-			(.rebind rmi-reg "RmiExample7.MyService" stub)
-			(.println System/out (format "Registered %s" stub))
-			(.println System/out (format "Waiting for incoming calls on RMI %s / service %s" rmi-reg stub))))
+### The rmi-server
+
+This is it (see ```rmi-server.clj```):
+
+	(defn run-rmi-server [& {:keys [host port ssf csf r-ssf r-csf] :or {port 1099}}]
+	  (let [cl (java.net.URLClassLoader.
+				(into-array [(java.net.URL. "http://127.0.0.1:8080/class-server/")]))
+			ifc (Class/forName "RmiExample7$MyService" false cl)
+			hndlr (proxy [java.lang.reflect.InvocationHandler] []
+					(invoke [proxy method args]
+					  (.println System/out (str "Invoking method '" method "' with args '" args "'"))))
+			impl (java.lang.reflect.Proxy/newProxyInstance cl (into-array [ifc]) hndlr)
+			stub (java.rmi.server.UnicastRemoteObject/exportObject impl 0 csf ssf)
+			rmi-reg (if host
+					  (do
+						(.println System/out (format "Connecting to RMI registry on host/port %s/%s with csf %s"
+													 host port r-csf))
+						(java.rmi.registry.LocateRegistry/getRegistry host port r-csf))
+					  (do
+						(.println System/out (format "Creating RMI registry on port %s with csf %s and ssf %s"
+													 port r-csf r-ssf))
+						(java.rmi.registry.LocateRegistry/createRegistry port r-csf r-ssf)))]
+		(.rebind rmi-reg "RmiExample7.MyService" stub)
+		(.println System/out (format "Registered %s" stub))
+		(.println System/out (format "Waiting for incoming calls on RMI %s / service %s" rmi-reg stub))))
   
-  The ```rmi-server```
+The ```rmi-server```
 
-	+ creates a classloader which points to the ```class-server```'s
-      HTTP service
-	+ **loads the interface via reflection** (see below for why this
-      is so)
-	+ creates a *Java dynamic proxy* for the ```Remote``` interface
-	+ publishes this object (which gives the stub)
-	+ starts the RMI registry or connects to a running registry
-	+ and binds the stub
++ creates a classloader which points to the ```class-server```'s HTTP
+  service
++ **loads the interface via reflection** (see below for why this is
+  so)
++ creates a *Java dynamic proxy* for the ```Remote``` interface
++ publishes this object (which gives the stub)
++ starts the RMI registry or connects to a running registry
++ and binds the stub
 
-  Make sure that the ```class-server``` is running:
+Make sure that the ```class-server``` is running when running
+```run-rmi-server```:
   
-	  example7$ java -cp lib/clojure.jar clojure.main -i clj/h42/rmi-server.clj -e '(run-rmi-server)'
+	example7$ java -cp lib/clojure.jar clojure.main \
+	  -i clj/h42/rmi-server.clj \
+	  -e '(run-rmi-server)'
 
-  The function takes some optional arguments which will be explained
-  later.
+The function takes some optional arguments which will be explained
+later.
 
-  Note that the classpath does **not include ```bin/```**. If it did
-  the server would load the class definitions via file IO and not via
-  ```HTTP-GET``` from the ```class-server``` due to the *parent first
-  delegation strategy* in ```java.lang.ClassLoader.loadClass(String,
-  boolean)``` (go ahead and try it).
+Note that the classpath does **not include ```bin/```**. If it did the
+server would load the class definitions via file IO and not via
+```HTTP-GET``` from the ```class-server``` due to the *parent first
+delegation strategy* in ```java.lang.ClassLoader.loadClass(String,
+boolean)``` (go ahead and try it).
 
-  There seem to be cases (**when using the OpenJDK**) when this call
-  returns --- i.e. the JVM exits --- right after
-  ```(run-rmi-server)``` has returned. This is probably because there
-  are only *daemon threads* running. In this case the JVM will
-  terminate. But there are other times when this does not happen. I
-  haven't done any research on this matter. Instead I just use an
-  extra ```-e '@(promise)'``` at the end of the command line to keep
-  the JVM running. So the above call becomes:
+There are cases (**when using the OpenJDK**) when this call returns --
+i.e. the JVM exits -- right after ```(run-rmi-server)``` has
+returned. This is probably because there are only *daemon threads*
+running. In this case the JVM will terminate. But there are other
+times when this does not happen. I haven't done any research on this
+matter. Instead I just use an extra ```-e '@(promise)'``` at the end
+of the command line to keep the JVM running. So the above call
+becomes:
 
-			example7$ java -cp lib/clojure.jar clojure.main -i clj/h42/rmi-server.clj -e '(run-rmi-server)' -e '@(promise)'
+	example7$ java -cp lib/clojure.jar clojure.main \
+	  -i clj/h42/rmi-server.clj \
+	  -e '(run-rmi-server)' \
+	  -e '@(promise)'
 
-  **Note:** In the ```rmi-server``` I used
+### The rmi-client
 
-			(java.rmi.server.UnicastRemoteObject/exportObject impl 0)
+This is it (see ```rmi-client.clj```):
 
-  and not just
+	(defn run-rmi-client [& {:keys [r-csf host port] :or {host "127.0.0.1" port 1099}}]
+	  (let [rmi-reg (java.rmi.registry.LocateRegistry/getRegistry host port r-csf)
+			_ (.println System/out (format "Using RMI registry %s" rmi-reg))
+			cl (java.net.URLClassLoader.
+				(into-array [(java.net.URL. "http://127.0.0.1:8080/class-server/")]))]
+		(.setContextClassLoader (Thread/currentThread) cl)
+		(let [stub (.lookup rmi-reg "RmiExample7.MyService")]
+		  (.println System/out (format "Calling .voidMethod on %s" stub))
+		  (.voidMethod stub))))
 
-			(java.rmi.server.UnicastRemoteObject/exportObject impl)
+Now run the client (again the classpath does not contain ```bin/```):
 	
-  If you run the second variant you will get
+	example7$ java -cp lib/clojure.jar clojure.main \
+	  -i clj/h42/rmi-client.clj \
+	  -e '(run-rmi-client)'
 
-			Exception in thread "main" java.lang.RuntimeException: java.rmi.StubNotFoundException: \
-			  Stub class not found: com.sun.proxy.$Proxy0_Stub; nested exception is: 
-				java.lang.ClassNotFoundException: com.sun.proxy.$Proxy0_Stub
-				at clojure.lang.Util.runtimeException(Util.java:165)
-				at clojure.lang.Compiler.eval(Compiler.java:6476)
-				at clojure.lang.Compiler.eval(Compiler.java:6431)
-				at clojure.core$eval.invoke(core.clj:2795)
-				at clojure.main$eval_opt.invoke(main.clj:296)
-				at clojure.main$initialize.invoke(main.clj:315)
-				at clojure.main$null_opt.invoke(main.clj:348)
-				at clojure.main$main.doInvoke(main.clj:426)
-				at clojure.lang.RestFn.invoke(RestFn.java:512)
-				at clojure.lang.Var.invoke(Var.java:421)
-				at clojure.lang.AFn.applyToHelper(AFn.java:185)
-				at clojure.lang.Var.applyTo(Var.java:518)
-				at clojure.main.main(main.java:37)
-			Caused by: java.rmi.StubNotFoundException: Stub class not found: com.sun.proxy.$Proxy0_Stub; nested exception is: 
-				java.lang.ClassNotFoundException: com.sun.proxy.$Proxy0_Stub
-				at sun.rmi.server.Util.createStub(Util.java:292)
-				at sun.rmi.server.Util.createProxy(Util.java:140)
-				at sun.rmi.server.UnicastServerRef.exportObject(UnicastServerRef.java:196)
-				at java.rmi.server.UnicastRemoteObject.exportObject(UnicastRemoteObject.java:310)
-				at java.rmi.server.UnicastRemoteObject.exportObject(UnicastRemoteObject.java:237)
-				at user$run_rmi_server.invoke(rmi-server.clj:9)
-				at user$eval5.invoke(NO_SOURCE_FILE:1)
-				at clojure.lang.Compiler.eval(Compiler.java:6465)
-				... 11 more
-			Caused by: java.lang.ClassNotFoundException: com.sun.proxy.$Proxy0_Stub
-				at java.net.URLClassLoader$1.run(URLClassLoader.java:366)
-				at java.net.URLClassLoader$1.run(URLClassLoader.java:355)
-				at java.security.AccessController.doPrivileged(Native Method)
-				at java.net.URLClassLoader.findClass(URLClassLoader.java:354)
-				at java.lang.ClassLoader.loadClass(ClassLoader.java:424)
-				at java.lang.ClassLoader.loadClass(ClassLoader.java:357)
-				at java.lang.Class.forName0(Native Method)
-				at java.lang.Class.forName(Class.java:270)
-				at sun.rmi.server.Util.createStub(Util.java:286)
-				... 18 more
-
-  The reason for this seems to be that
-  ```java.rmi.server.UnicastRemoteObject.exportObject(Remote)``` uses
-  ```sun.rmi.server.UnicastServerRef.UnicastServerRef(true)``` (see
-  the Java doc for the constructur for more details). I did some
-  google-ing and found this:
-
-	+ http://www.stratos.me/2008/05/stub-class-not-found/
-	
-	+ http://stackoverflow.com/questions/10648026/why-the-class-cannot-be-seen-in-its-source-file-java
-	
-	+ http://osdir.com/ml/java.sun.rmi/2006-10/msg00000.html
-
-  I still do not understand why there is a class
-  ```com.sun.proxy.$Proxy0_Stub``` that is generated and loaded(?)
-  but cannot be accessed afterwards. Anyway ...
-
-+ Now run ```rmi-client```
-
-  This is it:
-
-		(defn run-rmi-client [& {:keys [r-csf host port] :or {host "127.0.0.1" port 1099}}]
-		  (let [rmi-reg (java.rmi.registry.LocateRegistry/getRegistry host port r-csf)
-				_ (.println System/out (format "Using RMI registry %s" rmi-reg))
-				cl (java.net.URLClassLoader.
-					(into-array [(java.net.URL. "http://127.0.0.1:8080/class-server/")]))]
-			(.setContextClassLoader (Thread/currentThread) cl)
-			(let [stub (.lookup rmi-reg "RmiExample7.MyService")]
-			  (.println System/out (format "Calling .voidMethod on %s" stub))
-			  (.voidMethod stub))))
-
-  (again the classpath does not contain ```bin/```)
-	
-		example7$ java -cp lib/clojure.jar clojure.main -i clj/h42/rmi-client.clj -e '(run-rmi-client)'
-
-**TODO: when using OpenJDK I get an exception once in a while.**
-
-## Controlling the client and server side sockets
+### Controlling the client and server side sockets (RMI registry)
 
 In ```sf.clj``` you find functions for creating
 ```java.rmi.server.RMIClientSocketFactory``` and
@@ -547,15 +489,14 @@ sockets*) for the RMI registry and the registered ```Remote```
 objects. And you can use them to control how the RMI client connects
 to these server-side sockets.
 
-### Working around an RMI problem
-
 First we tell the ```rmi-server``` to open it's RMI registry on
-```127.0.0.2:1099``` instead of ```0.0.0.0:1099``` (make sure you have the
-class-server running).
+```127.0.0.2:1099``` instead of ```0.0.0.0:1099``` (make sure you have
+the ```class-server``` running).
 
 	example7$ java -cp lib/clojure.jar clojure.main \
-	  -i clj/h42/rmi-server.clj -i clj/h42/sf.clj \
-      -e '(run-rmi-server :r-ssf (new-ssf :addr "127.0.0.2"))' \
+	  -i clj/h42/rmi-server.clj \
+	  -i clj/h42/sf.clj \
+	  -e '(run-rmi-server :r-ssf (new-ssf :addr "127.0.0.2"))' \
 	  -e '@(promise)'
 
 Check with:
@@ -580,108 +521,157 @@ On the client side you'll get:
         at com.sun.proxy.$Proxy0.voidMethod(Unknown Source)
 	[...]
 
-This exception is **thrown on the server-side**. The cause seems to
-be, that the RMI runtime tries to create a new instance of a class
-that it cannot load through it's classloader because it's a class that
-Clojure creates on-the-fly (see ```clojure.asm.ClassWriter``` for
-details).
+I haven't really found the cause of this. There are two ways to fix
+this.
 
-These class definitions (i.e. their byte-code) are created and used
-(i.e. the class-definition is loaded) by one ```DynamicClassLoader```
-and are not made available (e.g. cached somewhere) to any other
-classloader. After the ```DynamicClassLoader``` is popped off the
-thread-local bindings stack the **class definition** is not accessable
-anymore. The corresponding **```Class``` is** accessable though
-(e.g. through instances of that class).
+The first is to tell Clojure to write its classes to the file-system
+(for more on *generated classes* see below). Try this:
 
-We can fix this problem by telling Clojure to write the
-class-definition to a file (see
-```clojure.lang.Compiler.writeClassFile(String, byte[])``` and it's
-callers for more details; it's called from within the ```proxy```
-macro also) when running the ```rmi-server``` --- like this:
-
-	example7$ mkdir -p class-cache/ \
-	  && rm -rf class-cache/* \
-	  && java -Dclojure.compile.path=class-cache \
+	example7$ mkdir -p ./class-cache/ \
+	  && rm -rf ./class-cache/* \
+	  && java -Dclojure.compile.path=./class-cache/ \
 	    -cp lib/clojure.jar clojure.main \
 	    -e '(.bindRoot Compiler/COMPILE_FILES true)' \
-	    -i clj/h42/rmi-server.clj -i clj/h42/sf.clj \
-        -e '(run-rmi-server :r-ssf (new-ssf :addr "127.0.0.2"))' \
+	    -i clj/h42/rmi-server.clj \
+	    -i clj/h42/sf.clj \
+	    -e '(run-rmi-server :r-ssf (new-ssf :addr "127.0.0.2"))' \
 	    -e '@(promise)'
 
 Here we make Clojure write the generated class-definitions to
 ```./class-cache/```. I do not use the default ```./classes/``` to be
 sure that the ```rmi-client``` will not see them (although I haven't
-checked that ```classes``` is indeed visible to any classloader
-**TODO: check this**). Note that ```-e '(.bindRoot
-Compiler/COMPILE_PATH "class-cache")'``` will **not work** because
+checked that ```./classes/``` is indeed visible to any classloader by
+default --- **TODO: check this**). Note that ```-e '(.bindRoot
+Compiler/COMPILE_PATH "./class-cache/")'``` will **not work** because
 this root binding is hidden by the ```clojure.main/with-bindings```
 macro which is in effect when the code is run.
 
-Now run the client again:
+Eventhough the classpath does not include ```./classes/``` it still
+seems to change *something* about the environment (which probably has
+something to do with classloading). You should be able to run
+```run-rmi-client``` with no problem.
+
+The second fix seems to be a *real fix*: it uses the RMI API
+```java.rmi.server.RMIClassLoader/loadProxyClass``` to create the
+proxy instead of using
+```java.lang.reflect.Proxy/newProxyInstance```. This is the code (see
+```rmi-server2.clj```):
+
+	(defn run-rmi-server2 [& {:keys [host port ssf csf r-ssf r-csf] :or {port 1099}}]
+	  (let [cl (java.net.URLClassLoader.
+				(into-array [(java.net.URL. "http://127.0.0.1:8080/class-server/")]))
+			hndlr (proxy [java.lang.reflect.InvocationHandler] []
+					(invoke [proxy method args]
+					  (.println System/out (str "Invoking method '" method "' with args '" args "'"))))
+			prxy-clss (java.rmi.server.RMIClassLoader/loadProxyClass
+					   nil 
+					   (into-array ["RmiExample7$MyService"])
+					   cl)
+			impl (.newInstance (.getConstructor prxy-clss (into-array [java.lang.reflect.InvocationHandler]))
+			                   (into-array [hndlr]))
+			stub (java.rmi.server.UnicastRemoteObject/exportObject impl 0 csf ssf)
+			rmi-reg (if host
+					  (do
+						(.println System/out (format "Connecting to RMI registry on host/port %s/%s with csf %s"
+													 host port r-csf))
+						(java.rmi.registry.LocateRegistry/getRegistry host port r-csf))
+					  (do
+						(.println System/out (format "Creating RMI registry on port %s with csf %s and ssf %s"
+													 port r-csf r-ssf))
+						(java.rmi.registry.LocateRegistry/createRegistry port r-csf r-ssf)))]
+		(.rebind rmi-reg "RmiExample7.MyService" stub)
+		(.println System/out (format "Registered %s" stub))
+		(.println System/out (format "Waiting for incoming calls on RMI %s / service %s" rmi-reg stub))))
+
+Now run this:
 
 	example7$ java -cp lib/clojure.jar clojure.main \
-	  -i clj/h42/rmi-client.clj \
-	  -e '(run-rmi-client :host "127.0.0.2")'
+	  -i clj/h42/rmi-server2.clj \
+	  -i clj/h42/sf.clj \
+	  -e '(run-rmi-server2 :r-ssf (new-ssf :addr "127.0.0.2"))' \
+	  -e '@(promise)'
 
-This time it works. Notice that we did not even include
-```./class-cache/``` in our classpath via ```-cp``` and still this fixed
-the problem. **TODO: why is this so?!**
+Again you should be able to run the client with no problem.
 
-You can observe the same thing when using a
-```java.rmi.server.RMIClientSocketFactory``` (try using
-```Compiler/COMPILE_FILES false``` in this example):
+### A note about java.rmi.server.UnicastRemoteObject/exportObject
 
-	example7$ mkdir -p class-cache/ \
-	  && rm -rf class-cache/* \
-	  && java -Dclojure.compile.path=class-cache \
-	    -cp lib/clojure.jar clojure.main \
-	    -e '(.bindRoot Compiler/COMPILE_FILES true)' \
-	    -i clj/h42/rmi-server.clj -i clj/h42/sf.clj \
-        -e '(run-rmi-server :r-csf (new-csf :addr "127.0.0.2"))' \
-	    -e '@(promise)'
+While putting together the code I tried 
 
-I could not come up with a use-case where you would want to use a
-```java.rmi.server.RMIClientSocketFactory``` for the RMI registry
-since the client must **first** connect to the RMI registry in order
-to be able to receive the ```java.rmi.server.RMIClientSocketFactory```
-from it (chicken-egg-problem). So this is just for demonstration:
+	stub (java.rmi.server.UnicastRemoteObject/exportObject impl)
 
-	example7$ java -cp lib/clojure.jar clojure.main \
-	  -i clj/h42/rmi-client.clj \
-	  -e '(run-rmi-client)'
+instead of
 
-### Caching classes
+	stub (java.rmi.server.UnicastRemoteObject/exportObject impl 0 csf ssf)
 
-Using ```-e '(.bindRoot Compiler/COMPILE_FILES true)'``` is fine for
-the example above. But usually you do not want to write all the class
-definitions to files. In (**TODO: check this in**)
-```mobile-proxy.clj``` you'll find a macro that you can use to wrap
-the code you want to compile to files.
+in ```run-rmi-server2``` -- but when you run that you'll get:
 
-I did not find a way to tell Clojure to pass the generated byte-code
-to a function that I could supply. So the macro first calls the
-compile and reads the byte code from the generated files and finally
-it deletes those files. The byte-code can then be cached and could be
-delivered by a ```class-server``` which may be running in the
-```rmi-server```'s JVM.
+	Exception in thread "main" java.lang.RuntimeException: java.rmi.StubNotFoundException: \
+	  Stub class not found: com.sun.proxy.$Proxy0_Stub; nested exception is: 
+		java.lang.ClassNotFoundException: com.sun.proxy.$Proxy0_Stub
+		at clojure.lang.Util.runtimeException(Util.java:165)
+		at clojure.lang.Compiler.eval(Compiler.java:6476)
+		at clojure.lang.Compiler.eval(Compiler.java:6431)
+		at clojure.core$eval.invoke(core.clj:2795)
+		at clojure.main$eval_opt.invoke(main.clj:296)
+		at clojure.main$initialize.invoke(main.clj:315)
+		at clojure.main$null_opt.invoke(main.clj:348)
+		at clojure.main$main.doInvoke(main.clj:426)
+		at clojure.lang.RestFn.invoke(RestFn.java:512)
+		at clojure.lang.Var.invoke(Var.java:421)
+		at clojure.lang.AFn.applyToHelper(AFn.java:185)
+		at clojure.lang.Var.applyTo(Var.java:518)
+		at clojure.main.main(main.java:37)
+	Caused by: java.rmi.StubNotFoundException: Stub class not found: com.sun.proxy.$Proxy0_Stub; nested exception is: 
+		java.lang.ClassNotFoundException: com.sun.proxy.$Proxy0_Stub
+		at sun.rmi.server.Util.createStub(Util.java:297)
+		at sun.rmi.server.Util.createProxy(Util.java:142)
+		at sun.rmi.server.UnicastServerRef.exportObject(UnicastServerRef.java:197)
+		at java.rmi.server.UnicastRemoteObject.exportObject(UnicastRemoteObject.java:383)
+		at java.rmi.server.UnicastRemoteObject.exportObject(UnicastRemoteObject.java:301)
+		at user$run_rmi_server2.doInvoke(rmi-server2.clj:14)
+		at clojure.lang.RestFn.invoke(RestFn.java:397)
+		at user$eval35.invoke(NO_SOURCE_FILE:1)
+		at clojure.lang.Compiler.eval(Compiler.java:6465)
+		... 11 more
+	Caused by: java.lang.ClassNotFoundException: com.sun.proxy.$Proxy0_Stub
+		at java.net.URLClassLoader$1.run(URLClassLoader.java:372)
+		at java.net.URLClassLoader$1.run(URLClassLoader.java:361)
+		at java.security.AccessController.doPrivileged(Native Method)
+		at java.net.URLClassLoader.findClass(URLClassLoader.java:360)
+		at java.lang.ClassLoader.loadClass(ClassLoader.java:424)
+		at java.lang.ClassLoader.loadClass(ClassLoader.java:357)
+		at java.lang.Class.forName0(Native Method)
+		at java.lang.Class.forName(Class.java:340)
+		at sun.rmi.server.Util.createStub(Util.java:292)
+		... 19 more
 
-**TODO: say more about macro.**
+The reason for this seems to be that
+```java.rmi.server.UnicastRemoteObject.exportObject(Remote)``` uses
+```sun.rmi.server.UnicastServerRef.UnicastServerRef(true)``` (see the
+Java doc for the constructur for more details). I did some google-ing
+and found this:
 
-### Controlling the host/port of the ```Remote``` object/service
++ http://www.stratos.me/2008/05/stub-class-not-found/
+	
++ http://stackoverflow.com/questions/10648026/why-the-class-cannot-be-seen-in-its-source-file-java
+	
++ http://osdir.com/ml/java.sun.rmi/2006-10/msg00000.html
+
+I still do not understand why there is a class
+```com.sun.proxy.$Proxy0_Stub``` that is generated and loaded(?)  but
+cannot be accessed afterwards. Anyway ...
+
+### Controlling the client and server side sockets (Remote object/service)
 
 Now let's run our ```Remote``` service on another host/IP. This time
-the RMI server has to tell the client how to connect through a
+the server-side has to tell the client how to connect through a
 ```java.rmi.server.RMIClientSocketFactory```:
 
-	example7$ mkdir -p class-cache/ \
-	  && rm -rf class-cache/* \
-	  && java -Dclojure.compile.path=class-cache \
-	    -cp lib/clojure.jar clojure.main \
-	    -e '(.bindRoot Compiler/COMPILE_FILES true)' \
-	    -i clj/h42/rmi-server.clj -i clj/h42/sf.clj \
-        -e '(run-rmi-server :ssf (new-ssf :addr "127.0.0.2") :csf (new-csf :addr "127.0.0.2"))' \
-	    -e '@(promise)'
+	example7$ java -cp lib/clojure.jar clojure.main \
+	  -i clj/h42/rmi-server2.clj \
+	  -i clj/h42/sf.clj \
+	  -e '(run-rmi-server2 :ssf (new-ssf :addr "127.0.0.2") :csf (new-csf :addr "127.0.0.2"))' \
+	  -e '@(promise)'
 
 Run the client.
 
@@ -692,47 +682,286 @@ Run the client.
 You'll get:
 
     [...]
-	Caused by: java.lang.ClassNotFoundException: user.proxy$java.lang.Object$Serializable$RMIClientSocketFactory$d954f6b8 \
-	  (no security manager: RMI class loader disabled)
-		at sun.rmi.server.LoaderHandler.loadClass(LoaderHandler.java:396)
-		at sun.rmi.server.LoaderHandler.loadClass(LoaderHandler.java:186)
-		at java.rmi.server.RMIClassLoader$2.loadClass(RMIClassLoader.java:637)
-		at java.rmi.server.RMIClassLoader.loadClass(RMIClassLoader.java:264)
-		at sun.rmi.server.MarshalInputStream.resolveClass(MarshalInputStream.java:214)
-		at java.io.ObjectInputStream.readNonProxyDesc(ObjectInputStream.java:1613)
+	Caused by: java.rmi.UnmarshalException: error unmarshalling return; nested exception is:
+			java.lang.ClassNotFoundException: user.proxy$java.lang.Object$Serializable$RMIClientSocketFactory$d954f6b8 \
+			(no security manager: RMI class loader disabled)
+			at sun.rmi.registry.RegistryImpl_Stub.lookup(Unknown Source)
     [...]
 
-In this case our ```proxy``` from ```new-csf``` made it to the
-```rmi-client``` but again it's an instance of a class which is
-created on-the-fly. This class is not visible to the ```rmi-client```.
+In this case our serialized ```proxy``` (instance) from ```new-csf```
+made it to the ```rmi-client``` but its class
+```user.proxy$java.lang.Object$Serializable$RMIClientSocketFactory$d954f6b8```
+is not visible to the client. So the instance cannot be deserialized.
 
-OK, so let's make the class available to the client. We just have to
-add ```./class-cache/``` to the ```class-server```'s classpath:
+Clojure creates class-definitions **on-the-fly** for functions and
+proxys (and other things) and hands those to the JVM. These classes
+are not loaded from JARs/class-files (if you are not using AOT
+compilation).
 
-	example7$ java -cp lib/clojure.jar:bin/:class-cache/ clojure.main -i clj/h42/class-server.clj -e '(run-class-server)'
+We can use the trick from above to make Clojure write those
+class-definitions to the file-system from where the client can load
+them - like so:
 
-Now run the ```rmi-server``` and the ```rmi-client``` again.  This
-time you'll get:
+	example7$ mkdir -p ./class-cache/ \
+      && rm -rf ./class-cache/* \
+      && java -Dclojure.compile.path=./class-cache/ \
+       -cp lib/clojure.jar clojure.main \
+       -e '(.bindRoot Compiler/COMPILE_FILES true)' \
+       -i clj/h42/rmi-server2.clj \
+	   -i clj/h42/sf.clj \
+	   -e '(run-rmi-server2 :ssf (new-ssf :addr "127.0.0.2") :csf (new-csf :addr "127.0.0.2"))' \
+	   -e '@(promise)'
 
-	Exception in thread "main" java.lang.IllegalStateException: Attempting to call unbound fn: #'user/to-inet-addr
-		at clojure.lang.Var$Unbound.throwArity(Var.java:43)
-		at clojure.lang.AFn.invoke(AFn.java:39)
-		at user$new_csf$fn__34.invoke(sf.clj:25)
-		at user.proxy$java.lang.Object$Serializable$RMIClientSocketFactory$d954f6b8.createSocket(Unknown Source)
+Run the client with ```./class-cache/``` on the classpath:
 
-The client did find/load the class but Clojures on-the-fly classes for
-functions are just *references* to the corresponding functions --- in
-this case the function ```to-inet-addr``` in ```sf.clj```. And this
-function is not visible to our client.
-
-Here we just load the Clojure source to fix this. You could use the
-```class-server``` to remote-load.
-
-	example7$ java -cp lib/clojure.jar clojure.main \
-	  -i clj/h42/rmi-client.clj -i clj/h42/sf.clj \
+	example7$ java -cp ./class-cache/:lib/clojure.jar clojure.main \
+	  -i clj/h42/rmi-client.clj \
 	  -e '(run-rmi-client)'
 
-**Finally!**
+This time you'll get:
+
+	Exception in thread "main" java.lang.IllegalStateException: Attempting to call unbound fn: #'user/to-inet-addr
+			at clojure.lang.Var$Unbound.throwArity(Var.java:43)
+			at clojure.lang.AFn.invoke(AFn.java:39)
+    [...]
+
+The client did find/load the class but Clojures generated classes for
+functions are just *references* to the corresponding functions
+(i.e. the **```var``` which must be bound to the function**) --- in
+this case ```#'user/to-inet-addr``` (which can be loaded from
+```sf.clj```). And this ```var``` is not bound at the moment.
+
+OK, let's fix that:
+
+	example7$ java -cp ./class-cache/:lib/clojure.jar clojure.main \
+	  -i clj/h42/rmi-client.clj \
+	  -i clj/h42/sf.clj \
+	  -e '(run-rmi-client)'
+
+WTF?!?! Now we get (again):
+
+    [...]
+	Caused by: java.rmi.NoSuchObjectException: no such object in table
+			at sun.rmi.transport.StreamRemoteCall.exceptionReceivedFromServer(StreamRemoteCall.java:276)
+			at sun.rmi.transport.StreamRemoteCall.executeCall(StreamRemoteCall.java:253)
+			at sun.rmi.server.UnicastRef.invoke(UnicastRef.java:162)
+			at java.rmi.server.RemoteObjectInvocationHandler.invokeRemoteMethod(RemoteObjectInvocationHandler.java:194)
+			at java.rmi.server.RemoteObjectInvocationHandler.invoke(RemoteObjectInvocationHandler.java:148)
+			at com.sun.proxy.$Proxy0.voidMethod(Unknown Source)
+    [...]
+
+This again seems to be some kind of classloading issue. We fix this by
+making the classes in ```./class-cache/``` available to the
+```rmi-server```.
+
+	example7$ mkdir -p ./class-cache/ \
+      && rm -rf ./class-cache/* \
+      && java -Dclojure.compile.path=./class-cache/ \
+       -cp ./class-cache/:lib/clojure.jar clojure.main \
+       -e '(.bindRoot Compiler/COMPILE_FILES true)' \
+       -i clj/h42/rmi-server2.clj \
+	   -i clj/h42/sf.clj \
+	   -e '(run-rmi-server2 :ssf (new-ssf :addr "127.0.0.2") :csf (new-csf :addr "127.0.0.2"))' \
+	   -e '@(promise)'
+
+And once more:
+
+	example7$ java -cp ./class-cache/:lib/clojure.jar clojure.main \
+	  -i clj/h42/rmi-client.clj \
+	  -i clj/h42/sf.clj \
+	  -e '(run-rmi-client)'
+
+Phew! Finally!
+
+### Using the class-server for serving class-cache
+
+The solution above works but the client and the server have to **share
+a file-system** in order to access ```./class-cache/```. What if we
+used the ```class-server``` to handle the access? Like this:
+
+	example7$ java -cp ./class-cache/:lib/clojure.jar:bin/ clojure.main \
+	  -i clj/h42/misc.clj \
+	  -i clj/h42/class-server.clj \
+	  -e '(run-class-server)'
+
+Run the server:
+
+	example7$ mkdir -p ./class-cache/ \
+      && rm -rf ./class-cache/* \
+      && java -Dclojure.compile.path=./class-cache/ \
+       -cp lib/clojure.jar clojure.main \
+       -e '(.bindRoot Compiler/COMPILE_FILES true)' \
+       -i clj/h42/rmi-server2.clj \
+	   -i clj/h42/sf.clj \
+	   -e '(run-rmi-server2 :ssf (new-ssf :addr "127.0.0.2") :csf (new-csf :addr "127.0.0.2"))' \
+	   -e '@(promise)'
+
+And once more:
+
+	example7$ java -cp lib/clojure.jar clojure.main \
+	  -i clj/h42/rmi-client.clj \
+	  -i clj/h42/sf.clj \
+	  -e '(run-rmi-client)'
+
+Oh no! Not again! We get:
+
+    [...]
+	Caused by: java.rmi.NoSuchObjectException: no such object in table
+			at sun.rmi.transport.StreamRemoteCall.exceptionReceivedFromServer(StreamRemoteCall.java:276)
+			at sun.rmi.transport.StreamRemoteCall.executeCall(StreamRemoteCall.java:253)
+			at sun.rmi.server.UnicastRef.invoke(UnicastRef.java:162)
+    [...]
+
+For some weird reason this works when using ```run-rmi-server```
+instead of ```run-rmi-server2```. I assume that it's a class-loading
+issue again. While trying to find a **real** fix I discovered that
+just adding
+
+    (defmacro foo [])
+
+at the top of ```rmi-server2.clj``` will make it work. I do not know
+**why** this is so though. Must be some internal Clojure stuff.... OK,
+we'll leave it and see how far we can get.
+
+### Caching and serving dynamic class-definitions
+
+Serving the generated classes via the ```class-server``` was ok for
+checking if we could have the ```rmi-client``` *remote load* those
+classes in principle.
+
+Now we would like to *intercept* the generated classes within the
+```rmi-server```, cache them somewhere and then serve them to remote
+clients. This time the ```rmi-server``` and the ```class-server```
+should be able to run with no file-system being shared.
+
+First let's *grab* the generated classes. We do not want to use ```-e
+'(.bindRoot Compiler/COMPILE_FILES true)'``` since we do not want
+Clojure to write all class-definitions for all functions/proxys/etc to
+the file-system. Instead we want to *selectivly* decide which
+class-definitions to *grab*.
+
+I did not find a way to tell Clojure to pass the generated byte-code
+directly to a function (that I could supply). As a workaround the
+macro ```class-def-for``` in ```class-def-for.clj``` first runs the
+compile (of the body), reads the byte-code from the generated files
+and finally deletes those files. The byte-code and the classname is
+then passed to a function that the user of the macro supplies.
+
+The byte-code may then be cached and could be delivered by a
+```class-server```. For now we will run the ```class-server``` in the
+```rmi-server```'s JVM. But we could extend the ```class-server``` so
+that it can **receive** (and cache and deliver) byte-code remotely.
+
+The ```class-def-for``` macro will first *compile* the body (by
+calling the Clojure compiler explicitly) and then *return* the body
+(to Clojures evaluation) so in the end the compiler will compile the
+body **twice**.
+
+I haven't found a way to do this with **just one** compile. And I do
+not know what may result from this if the compile of the body had any
+side-effects (other than writing the byte-code to the file-system).
+
+So now when we run the ```rmi-server``` we have to wrap the code for
+which we want to serve the class-definitions with ```class-def-for```
+and hand-over the byte-code to the ```class-server```. We do this by
+using ```caching-rec-fn``` which makes the class-definition avialable
+to the ```class-server``` by calling ```put-cache``` (in
+```class-server.clj```).
+
+Our first try is this: (make sure that you have
+```/tmp/class-cache/``` created --
+i.e. ```${java.io.tmpdir}/class-cache/```)
+
+	example7$ rm -rf /tmp/class-cache/* \
+	   && java -cp lib/clojure.jar:./bin/ clojure.main \
+       -i clj/h42/misc.clj \
+       -i clj/h42/class-server.clj \
+	   -e '(run-class-server)' \
+	   -i clj/h42/class-def-for.clj \
+       -i clj/h42/rmi-server2.clj \
+       -e '(class-def-for caching-rec-fn (load-file "clj/h42/sf.clj"))' \
+	   -e '(run-rmi-server2 :ssf (new-ssf :addr "127.0.0.2") :csf (new-csf :addr "127.0.0.2"))' \
+	   -e '@(promise)'
+
+Here we use ```(load-file "clj/h42/sf.clj")``` instead of ```-i
+clj/h42/sf.clj``` to load the code. And the client:
+
+    example7$ java -cp lib/clojure.jar clojure.main \
+	  -i clj/h42/rmi-client.clj \
+	  -i clj/h42/sf.clj \
+	  -e '(run-rmi-client)'
+
+You'll get a ```ClassNotFoundException```. If we put ```#_``` before
+```(delete-tree! tmp-dir)``` in ```class-def-for.clj``` we should be
+able to see which classes are generated. Repeating the run above
+reveals that **no classes** are written to the file-system.
+
+	example7$ find /tmp/class-cache/ 
+
+What went wrong? 
+
+We wrapped the code (body) that loads (and compiles) ```sf.clj``` with
+a macro which **compiles** this body (at **macro-expansion time**
+which is **compile-time**) in order to grab the classes. But the
+compile of **this body** does not produce any classes! Its the
+**evaluation of this body** which loads the code and finally leads to
+class generation. So this is a case where we have to apply the *class
+grabbing* at **evaluation-time** and not at **compile-time**.
+
+Luckily we have the function ```class-def-for**``` in
+```class-def-for.clj```for just this:
+
+	example7$ rm -rf /tmp/class-cache/* \
+	   && java -cp lib/clojure.jar:./bin/ clojure.main \
+       -i clj/h42/misc.clj \
+       -i clj/h42/class-server.clj \
+	   -e '(run-class-server)' \
+	   -i clj/h42/class-def-for.clj \
+       -i clj/h42/rmi-server2.clj \
+       -e '(class-def-for** caching-rec-fn #(load-file "clj/h42/sf.clj"))' \
+	   -e '(run-rmi-server2 :ssf (new-ssf :addr "127.0.0.2") :csf (new-csf :addr "127.0.0.2"))' \
+	   -e '@(promise)'
+
+Now run the client:
+
+    example7$ java -cp lib/clojure.jar clojure.main \
+	  -i clj/h42/rmi-client.clj \
+	  -i clj/h42/sf.clj \
+	  -e '(run-rmi-client)'
+
+OK, this works. And now we want to see the macro *in action*. For this
+we use ```sfx.clj```. This file has the same content as ```sf.clj```
+with the code being wrapped with ```class-def-for```.
+
+	example7$ rm -rf /tmp/class-cache/* \
+	   && java -cp lib/clojure.jar:./bin/ clojure.main \
+       -i clj/h42/misc.clj \
+       -i clj/h42/class-server.clj \
+	   -e '(run-class-server)' \
+	   -i clj/h42/class-def-for.clj \
+       -i clj/h42/rmi-server2.clj \
+       -i clj/h42/sfx.clj \
+	   -e '(run-rmi-server2 :ssf (new-ssf :addr "127.0.0.2") :csf (new-csf :addr "127.0.0.2"))' \
+	   -e '@(promise)'
+
+Then run the client:
+
+    example7$ java -cp lib/clojure.jar clojure.main \
+	  -i clj/h42/rmi-client.clj \
+	  -i clj/h42/sf.clj \
+	  -e '(run-rmi-client)'
+
+Again you'll get a ```ClassNotFoundException```. When you run this
+with the *disabled deletion* (see above) you should be able to see
+that ```find /tmp/class-cache/``` does indeed show some generated
+classes. But there seem to be classes which are missing. The cause
+seems to be the *double compilation* mentioned above: the second
+compile generates those classes for which instances are bound to the
+RMI runtime and thus those classes are not *grabed* and cannot be seen
+by the ```class-server``` and the ```rmi-client```.
+
+I haven't found a fix for this. So currently only the function
+```class-def-for**``` will work but not the macro ```class-def-for```.
 
 **TODO: link to stackoverflow "serializing clojure functions"**
 
