@@ -238,15 +238,15 @@ classpath did not contain the class we got a
 Start the ```RmiRegistry``` with the classpath containing
 ```../example2/bin/```:
 
-		example3$ java -cp bin/:../example2/bin/ RmiRegistry
+	example3$ java -cp bin/:../example2/bin/ RmiRegistry
 
 And now:
-
-		example2$ java -cp bin/ 'RmiExample2$Server' connect
+	
+	example2$ java -cp bin/ 'RmiExample2$Server' connect
 
 And:
 
-		example2$ java -cp bin/ 'RmiExample2$Client'
+	example2$ java -cp bin/ 'RmiExample2$Client'
 
 # RmiExample4
 
