@@ -69,17 +69,19 @@ API is infective*.
 
 Of course there is more to this: if we could use just any Java
 interface method to make a remote call there would be no way to say,
-for example that the returned value should be a *remote object* (with
-*by-reference* semantics instead of *by-value*). With RMI you say just
-this by having the returned class extend ```java.rmi.Remote```. So the
-idea of making RMI calls *against* any Java interface with by-value
-semantics would just give us a *remote procedure call*-like (RPC)
-solution. RMI gives us a *distributed object* solution. For many use
-cases though the RPC solution is all you want.
+for example that the returned value should be a *remote object*. In
+this case you only have a *handle* to the object (which may live in
+another JVM) and not the (copy of the) object itself. With RMI you say
+just this by having the returned class extend
+```java.rmi.Remote```. So the idea of making RMI calls *against* any
+Java interface with by-value semantics would just give us a *remote
+procedure call*-like (RPC) solution. RMI gives us a *distributed
+object* solution. For many use cases though the RPC solution is all
+you want.
 
-Q: Is there a way to take any java interface and generate the *RMI
-counterpart class* on the fly? And then use a Java dynamic proxy to
-wrap one with the other?
+**TODO: RMI and co-references**
+
+**TODO: RMI and equals for remote objects.**
 
 # RmiExample2
 
@@ -968,7 +970,7 @@ I haven't found a fix for this. So currently only the function
 ## Using the Java inter-op
 
 The ```run-rmi-server``` from above uses reflection
-(```Class/forName``` und
+(```Class/forName``` and
 ```java.lang.reflect.Proxy/newProxyInstance```) and not clojure's Java
 inter-op.
 
