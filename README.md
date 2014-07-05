@@ -235,8 +235,7 @@ definition for the interface ```RmiExample2$MyService```. Since the
 classpath did not contain the class we got a
 ```ClassNotFoundException: RmiExample2$MyService```.
 
-Start the ```RmiRegistry``` with the classpath containing
- ```../example2/bin/```:
+Start the ```RmiRegistry``` with the classpath containing ```../example2/bin/```:
 
 	example3$ java -cp bin/:../example2/bin/ RmiRegistry
 
