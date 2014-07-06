@@ -685,8 +685,7 @@ You'll get:
     [...]
 
 In this case our serialized ```proxy``` (instance) from ```new-csf```
-made it to the ```rmi-client``` but its class
-```user.proxy$java.lang.Object$Serializable$RMIClientSocketFactory$d954f6b8```
+made it to the ```rmi-client``` but its class ```user.proxy$java.lang.Object$Serializable$RMIClientSocketFactory$d954f6b8```
 is not visible to the client. So the instance cannot be deserialized.
 
 Clojure creates class-definitions **on-the-fly** for functions and
