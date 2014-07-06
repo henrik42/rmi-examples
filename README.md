@@ -480,9 +480,7 @@ Now run the client (again the classpath does not contain ```bin/```):
 
 ### Controlling the client and server side sockets (RMI registry)
 
-In ```sf.clj``` you find functions for creating
-```java.rmi.server.RMIClientSocketFactory``` and
-```java.rmi.server.RMIServerSocketFactory```.
+In ```sf.clj``` you find functions for creating ```java.rmi.server.RMIClientSocketFactory``` and ```java.rmi.server.RMIServerSocketFactory```.
 
 You can use them to control the server-side sockets (*listening
 sockets*) for the RMI registry and the registered ```Remote```
