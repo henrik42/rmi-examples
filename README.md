@@ -429,8 +429,7 @@ The ```rmi-server```
 + starts the RMI registry or connects to a running registry
 + and binds the stub
 
-Make sure that the ```class-server``` is running when running
-```run-rmi-server```:
+Make sure that the ```class-server``` is running when running ```run-rmi-server```:
   
 	example7$ java -cp lib/clojure.jar clojure.main \
 	  -i clj/h42/rmi-server.clj \
