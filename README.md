@@ -661,8 +661,7 @@ cannot be accessed afterwards. Anyway ...
 ### Controlling the client and server side sockets (Remote object/service)
 
 Now let's run our ```Remote``` service on another host/IP. This time
-the server-side has to tell the client how to connect through a
-```java.rmi.server.RMIClientSocketFactory```:
+the server-side has to tell the client how to connect through a ```java.rmi.server.RMIClientSocketFactory```:
 
 	example7$ java -cp lib/clojure.jar clojure.main \
 	  -i clj/h42/rmi-server2.clj \
