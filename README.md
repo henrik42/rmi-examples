@@ -859,8 +859,7 @@ So now when we run the ```rmi-server``` we have to wrap the code for
 which we want to serve the class-definitions with ```class-def-for```
 and hand-over the byte-code to the ```class-server```. We do this by
 using ```caching-rec-fn``` which makes the class-definition avialable
-to the ```class-server``` by calling ```put-cache``` (in
-```class-server.clj```).
+to the ```class-server``` by calling ```put-cache``` (in ```class-server.clj```).
 
 Our first try is this: (make sure that you have
 ```/tmp/class-cache/``` created --
