@@ -552,8 +552,7 @@ something to do with classloading). You should be able to run
 The second fix seems to be a *real fix*: it uses the RMI API
 ```java.rmi.server.RMIClassLoader/loadProxyClass``` to create the
 proxy instead of using
-```java.lang.reflect.Proxy/newProxyInstance```. This is the code (see
-```rmi-server2.clj```):
+```java.lang.reflect.Proxy/newProxyInstance```. This is the code (see ```rmi-server2.clj```):
 
 	(defn run-rmi-server2 [& {:keys [host port ssf csf r-ssf r-csf] :or {port 1099}}]
 	  (let [cl (java.net.URLClassLoader.
