@@ -746,8 +746,7 @@ WTF?!?! Now we get (again):
     [...]
 
 This again seems to be some kind of classloading issue. We fix this by
-making the classes in ```./class-cache/``` available to the
-```rmi-server```.
+making the classes in ```./class-cache/``` available to the ```rmi-server```.
 
 	example7$ mkdir -p ./class-cache/ \
       && rm -rf ./class-cache/* \
